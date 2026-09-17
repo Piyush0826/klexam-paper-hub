@@ -20,7 +20,10 @@ const sequelize = dbUrl
   ? new Sequelize(dbUrl, { dialect: 'mysql', logging: false, dialectOptions })
   : new Sequelize(database, user, password, { host, port, dialect: 'mysql', logging: false, dialectOptions })
 
+let isDbConnected = false
+
 async function connectDatabase() {
+  if (isDbConnected) return sequelize
   let setupConnection
 
   try {
@@ -53,6 +56,7 @@ async function connectDatabase() {
     User.hasMany(Report, { foreignKey: 'reportedBy', onDelete: 'CASCADE' })
     Report.belongsTo(User, { foreignKey: 'reportedBy' })
     await sequelize.sync()
+    isDbConnected = true
     console.log(`MySQL/Sequelize connected: ${host}:${port}/${database}`)
   } catch (error) {
     if (setupConnection) await setupConnection.end().catch(() => {})

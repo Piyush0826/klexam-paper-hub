@@ -1,17 +1,35 @@
 const nodemailer = require('nodemailer')
 
+let cachedTransporter = null
+
 function createTransporter() {
-  const port = Number(process.env.EMAIL_PORT)
-  if (!process.env.EMAIL_HOST || !port || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+  if (cachedTransporter) return cachedTransporter
+
+  const user = process.env.EMAIL_USER
+  const pass = (process.env.EMAIL_PASSWORD || '').replace(/\s+/g, '')
+  if (!user || !pass) {
     throw new Error('Email service is not configured')
   }
 
-  return nodemailer.createTransport({
+  if (user.endsWith('@gmail.com') || process.env.EMAIL_HOST === 'smtp.gmail.com') {
+    cachedTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user, pass },
+      pool: true,
+      maxConnections: 5,
+    })
+    return cachedTransporter
+  }
+
+  const port = Number(process.env.EMAIL_PORT) || 587
+  cachedTransporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port,
     secure: process.env.EMAIL_SECURE === 'true' || port === 465,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD.replace(/\s+/g, '') },
+    auth: { user, pass },
+    pool: true,
   })
+  return cachedTransporter
 }
 
 async function sendVerificationEmail({ email, name, otp }) {
