@@ -1,0 +1,4 @@
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; font-family: 'Trebuchet MS', Arial, sans-serif; font-size: 16px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid #e17d61; outline-offset: 3px; }

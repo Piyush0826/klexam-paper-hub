@@ -1,0 +1,12 @@
+const previewPage = (label, tone = '#d9ebe5') => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1040"><rect width="800" height="1040" fill="#fffefa"/><rect x="54" y="56" width="692" height="928" fill="${tone}" opacity=".28"/><text x="90" y="145" font-family="Georgia" font-size="30" fill="#18262c">KLExamPrep · ${label}</text><path d="M90 190h620M90 230h510M90 270h570" stroke="#657277" stroke-width="4" opacity=".55"/><text x="90" y="380" font-family="Arial" font-size="24" fill="#18262c">Previous examination paper</text><path d="M90 430h620M90 500h570M90 570h600M90 640h540M90 710h610" stroke="#9aa9a8" stroke-width="3"/><circle cx="670" cy="880" r="55" fill="#2e6f70" opacity=".8"/><text x="650" y="890" font-family="Arial" font-size="20" fill="white">${label.slice(0, 2).toUpperCase()}</text></svg>`)}`
+
+export const mockUser = { name: 'Rahul Patel', collegeId: '2200034567', department: 'CSE' }
+
+export const mockPapers = [
+  { id: 'data-structures-2025', subject: 'Data Structures', year: '2025', semester: 'Odd', department: 'CSE', contributor: 'Rahul Patel', uploadedAt: '12 Sep 2026, 09:30', type: 'image', files: [{ name: 'data-structures-page-1.svg', src: previewPage('DS 01') }, { name: 'data-structures-page-2.svg', src: previewPage('DS 02', '#f5dfd6') }] },
+  { id: 'operating-systems-2024', subject: 'Operating Systems', year: '2024', semester: 'Even', department: 'CSE', contributor: 'Ananya Shah', uploadedAt: '10 Sep 2026, 15:10', type: 'pdf', files: [{ name: 'operating-systems-2024.pdf' }] },
+  { id: 'database-systems-2025', subject: 'Database Systems', year: '2025', semester: 'Odd', department: 'IT', contributor: 'Vikram Joshi', uploadedAt: '08 Sep 2026, 11:45', type: 'image', files: [{ name: 'database-systems-page-1.svg', src: previewPage('DB 01', '#f5dfd6') }] },
+  { id: 'computer-networks-2024', subject: 'Computer Networks', year: '2024', semester: 'Even', department: 'ECE', contributor: 'Meera Nair', uploadedAt: '04 Sep 2026, 13:20', type: 'image', files: [{ name: 'computer-networks-page-1.svg', src: previewPage('CN 01', '#dfe8ef') }] },
+]
+
+export const getPaperById = (paperId) => mockPapers.find((paper) => paper.id === paperId)

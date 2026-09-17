@@ -1,0 +1,14 @@
+import Button from '../components/Button'
+
+const steps = [['01', 'Search papers', 'Find the exact subject, semester, or course material you need.'], ['02', 'View papers', 'Preview resources shared by people in your college community.'], ['03', 'Download papers', 'Keep useful papers close while you build your study plan.'], ['04', 'Contribute papers', 'Help the next student prepare with resources you already have.']]
+
+function Home({ navigate }) {
+  return <>
+    <section className="hero-section"><div className="hero-grid" /><div className="page-wrap hero-content"><p className="eyebrow">Your academic archive, together</p><h1>Prepare better with <em>previous</em> exam papers.</h1><p className="hero-copy">Find, share and access previous examination papers contributed by your college community.</p><div className="hero-actions"><Button onClick={() => navigate('/register')}>Get started <span aria-hidden="true">↗</span></Button><Button variant="text" onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })}>Browse papers <span aria-hidden="true">↓</span></Button></div><div className="hero-aside"><span className="status-dot" /> <span>Built for verified college communities</span></div></div><div className="hero-number" aria-hidden="true">01</div></section>
+    <section className="intro-section page-wrap" id="about"><p className="eyebrow">A clearer way to prepare</p><div className="intro-layout"><h2>Turn past papers into a <em>smarter</em> study routine.</h2><p>KLExamPrep brings the academic resources your community has already created into one focused, easy-to-use place. No noise. Just better preparation.</p></div></section>
+    <section className="steps-section" id="how-it-works"><div className="page-wrap"><div className="section-heading"><p className="eyebrow">How it works</p><span>Four simple moves</span></div><div className="steps-grid">{steps.map(([number, title, description]) => <article className="step" key={number}><span className="step-number">{number}</span><h3>{title}</h3><p>{description}</p></article>)}</div></div></section>
+    <section className="community-section page-wrap"><div className="community-card"><p className="eyebrow">Made for your campus</p><h2>Built for the <em>college</em> community.</h2><p>Students and faculty can contribute the papers, notes, and context that make studying less isolating and more effective.</p><Button onClick={() => navigate('/register')}>Join the community <span aria-hidden="true">↗</span></Button></div><div className="community-mark" aria-hidden="true">K<span>LP</span></div></section>
+  </>
+}
+
+export default Home
