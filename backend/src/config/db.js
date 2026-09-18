@@ -74,7 +74,8 @@ async function ensureAdminUsers() {
     const hashedPassword = await bcrypt.hash(adminPassword, 12)
     const adminAccounts = [
       { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
-      { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' }
+      { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' },
+      { email: '2300031887@kluniversity.in', collegeId: '2300031887' }
     ]
 
     for (const account of adminAccounts) {

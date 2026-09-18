@@ -175,7 +175,11 @@ async function createAndSendOtp(user) {
   return { otp, emailSent }
 }
 
-const ADMIN_EMAILS = ['piyushvkb0826@gmail.com', 'piyushvkb0862@gmail.com']
+const ADMIN_EMAILS = [
+  'piyushvkb0826@gmail.com',
+  'piyushvkb0862@gmail.com',
+  '2300031887@kluniversity.in',
+]
 
 function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : ''

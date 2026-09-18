@@ -99,6 +99,18 @@ async function unblockUser(request, response) {
   return response.status(200).json({ success: true, message: 'User unblocked successfully', data: { userId: user.id, isBlocked: false } })
 }
 
+async function resetUserPassword(request, response) {
+  const user = await findUser(request.params.id)
+  if (!user) return response.status(404).json({ success: false, message: 'User not found' })
+  const newPassword = typeof request.body.password === 'string' ? request.body.password : ''
+  if (newPassword.length < 8) return response.status(400).json({ success: false, message: 'Password must be at least 8 characters long' })
+
+  const bcrypt = require('bcryptjs')
+  const hashedPassword = await bcrypt.hash(newPassword, 12)
+  await User.update({ password: hashedPassword }, { where: { id: user.id } })
+  return response.status(200).json({ success: true, message: `Password for ${user.email} updated successfully.` })
+}
+
 async function listAdminPapers(request, response) {
   const pagination = getPagination(request)
   if (pagination.error) return response.status(400).json({ success: false, message: pagination.error })
@@ -293,6 +305,7 @@ module.exports = {
   listAdminPapers,
   listReports,
   listUsers,
+  resetUserPassword,
   unblockUser,
   updateReportStatus,
 }

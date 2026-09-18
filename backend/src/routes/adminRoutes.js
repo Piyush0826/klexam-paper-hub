@@ -9,6 +9,7 @@ const {
   listAdminPapers,
   listReports,
   listUsers,
+  resetUserPassword,
   unblockUser,
   updateReportStatus,
 } = require('../controllers/adminController')
@@ -21,6 +22,7 @@ router.get('/users', listUsers)
 router.delete('/users/:id', deleteUserAccount)
 router.patch('/users/:id/block', blockUser)
 router.patch('/users/:id/unblock', unblockUser)
+router.patch('/users/:id/password', resetUserPassword)
 router.get('/papers', listAdminPapers)
 router.delete('/papers/:id', deleteAnyPaper)
 router.get('/reports', listReports)
