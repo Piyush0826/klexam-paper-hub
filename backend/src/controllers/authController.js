@@ -9,7 +9,7 @@ const { isCollegeEmail, isValidEmail, validateRegistrationInput } = require('../
 
 const OTP_EXPIRATION_MINUTES = 10
 const MAX_OTP_ATTEMPTS = 5
-const PASSWORD_RESET_EXPIRATION_MINUTES = 30
+const PASSWORD_RESET_EXPIRATION_MINUTES = 1440 // 24 hours
 
 async function registerUser(request, response) {
   const { errors, values } = validateRegistrationInput(request.body)
@@ -272,11 +272,12 @@ async function requestPasswordReset(request, response) {
         frontendUrl = new URL(request.headers.referer).origin
       } catch (_) {}
     }
-    if (!frontendUrl) {
-      frontendUrl = process.env.FRONTEND_URL
-    }
-    if (!frontendUrl || (process.env.NODE_ENV === 'production' && frontendUrl.includes('localhost'))) {
-      frontendUrl = 'https://frontend-wheat-delta-zv7jpocgcz.vercel.app'
+    if (!frontendUrl || frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1')) {
+      if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost') && !process.env.FRONTEND_URL.includes('127.0.0.1')) {
+        frontendUrl = process.env.FRONTEND_URL
+      } else {
+        frontendUrl = 'https://frontend-wheat-delta-zv7jpocgcz.vercel.app'
+      }
     }
 
     try {
@@ -292,14 +293,23 @@ async function requestPasswordReset(request, response) {
 }
 
 async function resetPassword(request, response) {
-  const token = typeof request.body.token === 'string' ? request.body.token : ''
+  const token = typeof request.body.token === 'string' ? request.body.token.trim() : ''
   const password = typeof request.body.password === 'string' ? request.body.password : ''
   if (!token || password.length < 8) return response.status(400).json({ success: false, message: 'A valid reset link and a password of at least 8 characters are required' })
 
-  const reset = await PasswordReset.findOne({ where: { tokenHash: hashResetToken(token) } })
-  if (!reset || new Date(reset.expiresAt) <= new Date()) {
-    if (reset) await reset.destroy()
-    return response.status(400).json({ success: false, message: 'This password reset link is invalid or has expired' })
+  const tokenHash = hashResetToken(token)
+  const reset = await PasswordReset.findOne({ where: { tokenHash } })
+  if (!reset) {
+    return response.status(400).json({ success: false, message: 'This password reset link is invalid or has already been used' })
+  }
+
+  // Allow 24 hours validity with timezone skew tolerance
+  const createdAtTime = new Date(reset.createdAt || reset.expiresAt).getTime()
+  const expiresAtTime = new Date(reset.expiresAt).getTime()
+  const now = Date.now()
+  if (now > expiresAtTime && (now - createdAtTime) > 24 * 60 * 60 * 1000) {
+    await reset.destroy()
+    return response.status(400).json({ success: false, message: 'This password reset link has expired. Please request a new one.' })
   }
 
   await User.update({ password: await bcrypt.hash(password, 12) }, { where: { id: reset.userId } })
