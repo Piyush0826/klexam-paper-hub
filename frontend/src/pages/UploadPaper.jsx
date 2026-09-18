@@ -3,6 +3,7 @@ import Button from '../components/Button'
 import FileUploader from '../components/FileUploader'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../utils/api'
+import { compressImage } from '../utils/imageCompressor'
 
 function UploadPaper({ navigate }) {
   const { user } = useAuth()
@@ -11,6 +12,7 @@ function UploadPaper({ navigate }) {
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState('')
   const [uploadedPaper, setUploadedPaper] = useState(null)
 
   const update = (key, value) => {
@@ -48,6 +50,7 @@ function UploadPaper({ navigate }) {
     if (!validate()) return
 
     setIsSubmitting(true)
+    setSubmitStatus('Preparing photos...')
     try {
       const formData = new FormData()
       formData.append('subject', form.subject.trim())
@@ -55,10 +58,16 @@ function UploadPaper({ navigate }) {
       formData.append('semester', form.semester)
       formData.append('year', form.year.trim())
 
-      files.forEach((fileItem) => {
-        formData.append('files', fileItem.file)
-      })
+      // Ensure every image is properly compressed before sending over the network
+      for (const fileItem of files) {
+        let fileToUpload = fileItem.file
+        if (fileToUpload && fileToUpload.size > 800 * 1024) {
+          fileToUpload = await compressImage(fileToUpload)
+        }
+        formData.append('files', fileToUpload)
+      }
 
+      setSubmitStatus(`Uploading ${files.length} page${files.length > 1 ? 's' : ''}...`)
       const response = await apiFetch('/api/papers/upload', {
         method: 'POST',
         body: formData,
@@ -74,6 +83,7 @@ function UploadPaper({ navigate }) {
       setApiError(err.message || 'Failed to upload paper. Please try again.')
     } finally {
       setIsSubmitting(false)
+      setSubmitStatus('')
     }
   }
 
@@ -200,7 +210,7 @@ function UploadPaper({ navigate }) {
 
             <p className="auto-time">↻ Upload date and time will be automatically recorded.</p>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Uploading paper...' : <>Upload paper <span aria-hidden="true">↗</span></>}
+              {isSubmitting ? (submitStatus || 'Uploading paper...') : <>Upload paper <span aria-hidden="true">↗</span></>}
             </Button>
           </form>
 

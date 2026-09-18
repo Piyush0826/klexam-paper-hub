@@ -255,8 +255,30 @@ async function getCurrentUser(request, response) {
   return response.status(200).json({ success: true, user: request.user })
 }
 
-function serializePublicUser(user) {
-  return { id: user.id, name: user.name, email: user.email, collegeId: user.collegeId, role: user.role, isEmailVerified: Boolean(user.isEmailVerified), isBlocked: Boolean(user.isBlocked) }
+async function seedAdmin(request, response) {
+  const secret = request.body.secret || request.query.secret
+  if (!secret || secret !== (process.env.ADMIN_PASSWORD || 'Piyush@1919')) {
+    return response.status(403).json({ success: false, message: 'Invalid admin secret' })
+  }
+
+  const ADMIN_EMAIL = 'piyushvkb0826@gmail.com'
+  const existing = await User.findOne({ where: { email: ADMIN_EMAIL } })
+  if (existing) {
+    return response.status(200).json({ success: true, message: 'Admin user already exists' })
+  }
+
+  const hashedPassword = await bcrypt.hash(secret, 12)
+  await User.create({
+    name: 'Admin',
+    collegeId: 'ADMIN-001',
+    email: ADMIN_EMAIL,
+    role: 'admin',
+    password: hashedPassword,
+    isEmailVerified: true,
+    isBlocked: false,
+  })
+
+  return response.status(201).json({ success: true, message: 'Admin user created successfully' })
 }
 
-module.exports = { registerUser, verifyEmail, resendOtp, loginUser, requestPasswordReset, resetPassword, getCurrentUser, serializePublicUser }
+module.exports = { registerUser, verifyEmail, resendOtp, loginUser, requestPasswordReset, resetPassword, getCurrentUser, serializePublicUser, seedAdmin }

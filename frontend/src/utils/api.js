@@ -23,17 +23,49 @@ export async function apiFetch(endpoint, options = {}) {
 		headers['Content-Type'] = headers['Content-Type'] || 'application/json'
 	}
 
-	const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-		...options,
-		headers,
-	})
+	let response
+	try {
+		response = await fetch(`${API_BASE_URL}${endpoint}`, {
+			...options,
+			headers,
+		})
+	} catch (networkErr) {
+		const isUpload = options.body instanceof FormData
+		let friendlyMessage = 'Unable to connect to the server. Please check your internet connection.'
+		if (isUpload) {
+			friendlyMessage = 'Upload failed to reach server. The file size may exceed network or server limits. Try uploading fewer or smaller photos.'
+		}
+		const error = new Error(networkErr.message === 'Failed to fetch' ? friendlyMessage : (networkErr.message || friendlyMessage))
+		error.isNetworkError = true
+		throw error
+	}
 
-	// Handle empty responses (204 No Content, etc.)
+	// Handle empty or non-JSON responses (204 No Content, HTML 413/504 pages, etc.)
 	const text = await response.text()
-	const data = text ? JSON.parse(text) : {}
+	let data = {}
+	if (text) {
+		try {
+			data = JSON.parse(text)
+		} catch {
+			data = {
+				message: response.status === 413
+					? 'The uploaded file payload is too large for the server. Please upload fewer or smaller photos.'
+					: response.status === 504
+					? 'The server timed out while processing the upload. Please try with fewer photos.'
+					: `Server returned error (${response.status})`,
+			}
+		}
+	}
 
 	if (!response.ok) {
-		const error = new Error(data.message || 'Something went wrong')
+		const message = data.message || (
+			response.status === 413
+				? 'The uploaded file payload is too large for the server.'
+				: response.status === 504
+				? 'The server timed out. Please try again.'
+				: 'Something went wrong'
+		)
+		const error = new Error(message)
 		error.status = response.status
 		error.data = data
 		throw error

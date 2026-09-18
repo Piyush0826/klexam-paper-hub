@@ -4,6 +4,8 @@ const path = require('path')
 const allowedTypes = new Map([
   ['application/pdf', 'pdf'],
   ['image/jpeg', 'image'],
+  ['image/jpg', 'image'],
+  ['image/pjpeg', 'image'],
   ['image/png', 'image'],
   ['image/webp', 'image'],
 ])
@@ -13,8 +15,18 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: maxFileSize, files: 10 },
   fileFilter: (request, file, callback) => {
-    const fileType = allowedTypes.get(file.mimetype)
+    let fileType = allowedTypes.get(file.mimetype)
     const extension = path.extname(file.originalname).toLowerCase()
+
+    // Resilient fallback for mobile cameras reporting generic MIME types
+    if (!fileType) {
+      if (['.jpg', '.jpeg', '.png', '.webp'].includes(extension)) {
+        fileType = 'image'
+      } else if (extension === '.pdf') {
+        fileType = 'pdf'
+      }
+    }
+
     const validExtension = fileType === 'pdf'
       ? extension === '.pdf'
       : ['.jpg', '.jpeg', '.png', '.webp'].includes(extension)

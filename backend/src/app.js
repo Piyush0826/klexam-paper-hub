@@ -19,12 +19,7 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginEmbedderPolicy: false,
     xFrameOptions: false,
-    contentSecurityPolicy: {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        'frame-ancestors': ["'self'", configuredOrigin, 'https://*.vercel.app', 'http://localhost:*', 'http://127.0.0.1:*'].filter(Boolean),
-      },
-    },
+    contentSecurityPolicy: false,
   })
 )
 app.use(cors({
@@ -32,11 +27,12 @@ app.use(cors({
     if (
       !origin ||
       origin === configuredOrigin ||
-      /^http:\/\/localhost:\d+$/.test(origin) ||
-      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) ||
+      /^http:\/\/localhost(:\d+)?$/.test(origin) ||
+      /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+      /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin) ||
       /\.vercel\.app$/.test(origin)
     ) return callback(null, true)
-    return callback(new Error(`Origin ${origin} is not allowed by CORS`))
+    return callback(null, false)
   },
   credentials: true,
 }))

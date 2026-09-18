@@ -53,13 +53,24 @@ async function uploadBuffer(file, folder, userId) {
 async function uploadPaperFiles(files, userId) {
   const uploaded = []
   try {
-    for (const [index, file] of files.entries()) {
-      const result = await uploadBuffer(file, `klexamprep/papers/${userId}`, userId)
-      uploaded.push({ ...result, originalName: file.originalname, fileType: result.resourceType === 'raw' ? 'pdf' : 'image', order: index + 1 })
-    }
-    return uploaded
+    const results = await Promise.all(
+      files.map(async (file, index) => {
+        const result = await uploadBuffer(file, `klexamprep/papers/${userId}`, userId)
+        const item = {
+          ...result,
+          originalName: file.originalname,
+          fileType: result.resourceType === 'raw' ? 'pdf' : 'image',
+          order: index + 1,
+        }
+        uploaded.push(item)
+        return item
+      })
+    )
+    return results.sort((a, b) => a.order - b.order)
   } catch (error) {
-    await removeCloudinaryFiles(uploaded)
+    if (uploaded.length) {
+      await removeCloudinaryFiles(uploaded).catch(() => {})
+    }
     throw error
   }
 }
