@@ -34,7 +34,7 @@ function UploadPaper({ navigate }) {
     }
 
     if (!files.length) {
-      nextErrors.files = 'Add at least one paper file (PDF or photo).'
+      nextErrors.files = 'Add at least one paper photo.'
     }
 
     setErrors(nextErrors)
