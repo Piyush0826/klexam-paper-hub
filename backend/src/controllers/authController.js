@@ -265,20 +265,9 @@ async function requestPasswordReset(request, response) {
     const token = crypto.randomBytes(32).toString('hex')
     await PasswordReset.destroy({ where: { userId: user.id } })
     await PasswordReset.create({ userId: user.id, tokenHash: hashResetToken(token), expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRATION_MINUTES * 60 * 1000) })
-    
-    let frontendUrl = request.headers?.origin
-    if (!frontendUrl && request.headers?.referer) {
-      try {
-        frontendUrl = new URL(request.headers.referer).origin
-      } catch (_) {}
-    }
-    if (!frontendUrl || frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1')) {
-      if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost') && !process.env.FRONTEND_URL.includes('127.0.0.1')) {
-        frontendUrl = process.env.FRONTEND_URL
-      } else {
-        frontendUrl = 'https://frontend-wheat-delta-zv7jpocgcz.vercel.app'
-      }
-    }
+
+    // Always use the production frontend URL — never localhost
+    const frontendUrl = 'https://frontend-wheat-delta-zv7jpocgcz.vercel.app'
 
     try {
       await sendPasswordResetEmail({ email: user.email, name: user.name, resetUrl: `${frontendUrl}/reset-password?token=${token}` })
