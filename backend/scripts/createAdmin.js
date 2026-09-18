@@ -7,7 +7,10 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const { User } = require('../src/models'); // Adjust path if needed
 const bcrypt = require('bcryptjs');
 
-const ADMIN_EMAIL = 'piyushvkb0826@gmail.com';
+const ADMIN_ACCOUNTS = [
+  { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
+  { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' }
+];
 
 async function main() {
   const plainPassword = process.env.ADMIN_PASSWORD;
@@ -16,26 +19,32 @@ async function main() {
     process.exit(1);
   }
 
-  // Check if admin already exists
-  const existing = await User.findOne({ where: { email: ADMIN_EMAIL } });
-  if (existing) {
-    console.log('⚠️ Admin user already exists. No action taken.');
-    process.exit(0);
-  }
-
   const hashed = await bcrypt.hash(plainPassword, 10);
 
-  await User.create({
-    name: 'Admin',
-    collegeId: process.env.ADMIN_COLLEGE_ID || 'ADMIN-001',
-    email: ADMIN_EMAIL,
-    role: 'admin',
-    password: hashed,
-    isEmailVerified: true,
-    isBlocked: false,
-  });
+  for (const account of ADMIN_ACCOUNTS) {
+    const existing = await User.findOne({ where: { email: account.email } });
+    if (existing) {
+      await User.update({
+        role: 'admin',
+        password: hashed,
+        isEmailVerified: true,
+        isBlocked: false,
+      }, { where: { id: existing.id } });
+      console.log(`✅ Admin user updated: ${account.email}`);
+    } else {
+      await User.create({
+        name: 'Admin',
+        collegeId: account.collegeId,
+        email: account.email,
+        role: 'admin',
+        password: hashed,
+        isEmailVerified: true,
+        isBlocked: false,
+      });
+      console.log(`✅ Admin user created: ${account.email}`);
+    }
+  }
 
-  console.log('✅ Admin user created successfully.');
   process.exit(0);
 }
 

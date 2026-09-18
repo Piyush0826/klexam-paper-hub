@@ -56,12 +56,53 @@ async function connectDatabase() {
     User.hasMany(Report, { foreignKey: 'reportedBy', onDelete: 'CASCADE' })
     Report.belongsTo(User, { foreignKey: 'reportedBy' })
     await sequelize.sync()
+    await ensureAdminUsers()
     isDbConnected = true
     console.log(`MySQL/Sequelize connected: ${host}:${port}/${database}`)
   } catch (error) {
     if (setupConnection) await setupConnection.end().catch(() => {})
     console.error(`MySQL/Sequelize connection failed: ${error.message}`)
     throw error
+  }
+}
+
+async function ensureAdminUsers() {
+  try {
+    const User = require('../models/User')
+    const bcrypt = require('bcryptjs')
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Piyush@1919'
+    const hashedPassword = await bcrypt.hash(adminPassword, 12)
+    const adminAccounts = [
+      { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
+      { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' }
+    ]
+
+    for (const account of adminAccounts) {
+      const existing = await User.findOne({ where: { email: account.email } })
+      if (!existing) {
+        await User.create({
+          name: 'Admin',
+          collegeId: account.collegeId,
+          email: account.email,
+          role: 'admin',
+          password: hashedPassword,
+          isEmailVerified: true,
+          isBlocked: false,
+        })
+        console.log(`[DB Admin Seed] Created admin account: ${account.email}`)
+      } else {
+        const updates = {}
+        if (existing.role !== 'admin') updates.role = 'admin'
+        if (!existing.isEmailVerified) updates.isEmailVerified = true
+        if (existing.isBlocked) updates.isBlocked = false
+        if (Object.keys(updates).length > 0) {
+          await User.update(updates, { where: { id: existing.id } })
+          console.log(`[DB Admin Seed] Updated privileges for: ${account.email}`)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[DB Admin Seed notice] Failed to ensure admin accounts: ${err.message}`)
   }
 }
 

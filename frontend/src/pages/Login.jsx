@@ -26,7 +26,11 @@ function Login({ navigate }) {
         body: JSON.stringify(form)
       })
       login(result.token, result.user)
-      navigate('/dashboard')
+      if (result.user?.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error) {
       setErrors({ form: error.message || 'Could not connect to the backend. Make sure it is running.' })
     } finally {

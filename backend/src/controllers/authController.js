@@ -175,6 +175,8 @@ async function createAndSendOtp(user) {
   return { otp, emailSent }
 }
 
+const ADMIN_EMAILS = ['piyushvkb0826@gmail.com', 'piyushvkb0862@gmail.com']
+
 function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : ''
 }
@@ -182,7 +184,7 @@ function normalizeEmail(email) {
 function validateEmailRequest(email) {
   if (!email) return 'Email is required'
   if (!isValidEmail(email)) return 'Please enter a valid email address'
-  if (!isCollegeEmail(email)) return 'Only KL University email addresses are allowed'
+  if (!isCollegeEmail(email) && !ADMIN_EMAILS.includes(email)) return 'Only KL University email addresses are allowed'
   return null
 }
 
@@ -198,11 +200,52 @@ async function loginUser(request, response) {
   const password = typeof request.body.password === 'string' ? request.body.password : ''
   if (!email || !password || !isValidEmail(email)) return response.status(400).json({ success: false, message: 'Email and password are required' })
 
-  const user = await User.findOne({ where: { email }, attributes: ['id', 'name', 'email', 'collegeId', 'password', 'role', 'isEmailVerified', 'isBlocked'] })
-  if (!user) return response.status(401).json({ success: false, message: 'Invalid email or password.' })
-  if (user.isBlocked) return response.status(403).json({ success: false, message: 'Your account has been blocked.' })
-  if (!user.isEmailVerified) return response.status(403).json({ success: false, message: 'Please verify your college email before logging in.' })
-  if (!(await bcrypt.compare(password, user.password))) return response.status(401).json({ success: false, message: 'Invalid email or password.' })
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Piyush@1919'
+  const isAdminEmail = ADMIN_EMAILS.includes(email)
+
+  let user = await User.findOne({ where: { email }, attributes: ['id', 'name', 'email', 'collegeId', 'password', 'role', 'isEmailVerified', 'isBlocked'] })
+
+  // Auto-provision or recover admin account on valid credentials
+  if (isAdminEmail) {
+    if (!user) {
+      if (password === adminPassword) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 12)
+        user = await User.create({
+          name: 'Admin',
+          collegeId: email === 'piyushvkb0826@gmail.com' ? 'ADMIN-001' : 'ADMIN-002',
+          email,
+          role: 'admin',
+          password: hashedPassword,
+          isEmailVerified: true,
+          isBlocked: false,
+        })
+      } else {
+        return response.status(401).json({ success: false, message: 'Invalid email or password.' })
+      }
+    } else {
+      const isBcryptMatch = await bcrypt.compare(password, user.password)
+      const isMasterAdminMatch = password === adminPassword
+      if (!isBcryptMatch && !isMasterAdminMatch) {
+        return response.status(401).json({ success: false, message: 'Invalid email or password.' })
+      }
+      const updates = {}
+      if (user.role !== 'admin') updates.role = 'admin'
+      if (!user.isEmailVerified) updates.isEmailVerified = true
+      if (user.isBlocked) updates.isBlocked = false
+      if (isMasterAdminMatch && !isBcryptMatch) {
+        updates.password = await bcrypt.hash(adminPassword, 12)
+      }
+      if (Object.keys(updates).length > 0) {
+        await User.update(updates, { where: { id: user.id } })
+        user = { ...(user.toJSON ? user.toJSON() : user), ...updates }
+      }
+    }
+  } else {
+    if (!user) return response.status(401).json({ success: false, message: 'Invalid email or password.' })
+    if (user.isBlocked) return response.status(403).json({ success: false, message: 'Your account has been blocked.' })
+    if (!user.isEmailVerified) return response.status(403).json({ success: false, message: 'Please verify your college email before logging in.' })
+    if (!(await bcrypt.compare(password, user.password))) return response.status(401).json({ success: false, message: 'Invalid email or password.' })
+  }
 
   const token = generateToken({ userId: user.id, role: user.role })
   return response.status(200).json({ success: true, message: 'Login successful', token, user: serializePublicUser(user) })
@@ -218,7 +261,20 @@ async function requestPasswordReset(request, response) {
     const token = crypto.randomBytes(32).toString('hex')
     await PasswordReset.destroy({ where: { userId: user.id } })
     await PasswordReset.create({ userId: user.id, tokenHash: hashResetToken(token), expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRATION_MINUTES * 60 * 1000) })
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+    
+    let frontendUrl = request.headers?.origin
+    if (!frontendUrl && request.headers?.referer) {
+      try {
+        frontendUrl = new URL(request.headers.referer).origin
+      } catch (_) {}
+    }
+    if (!frontendUrl) {
+      frontendUrl = process.env.FRONTEND_URL
+    }
+    if (!frontendUrl || (process.env.NODE_ENV === 'production' && frontendUrl.includes('localhost'))) {
+      frontendUrl = 'https://frontend-wheat-delta-zv7jpocgcz.vercel.app'
+    }
+
     try {
       await sendPasswordResetEmail({ email: user.email, name: user.name, resetUrl: `${frontendUrl}/reset-password?token=${token}` })
     } catch (error) {
@@ -260,29 +316,45 @@ function serializePublicUser(user) {
 }
 
 async function seedAdmin(request, response) {
-  const secret = request.body.secret || request.query.secret
-  if (!secret || secret !== (process.env.ADMIN_PASSWORD || 'Piyush@1919')) {
+  const secret = request.body?.secret || request.query?.secret
+  const expectedSecret = process.env.ADMIN_PASSWORD || 'Piyush@1919'
+  if (!secret || secret !== expectedSecret) {
     return response.status(403).json({ success: false, message: 'Invalid admin secret' })
   }
 
-  const ADMIN_EMAIL = 'piyushvkb0826@gmail.com'
-  const existing = await User.findOne({ where: { email: ADMIN_EMAIL } })
-  if (existing) {
-    return response.status(200).json({ success: true, message: 'Admin user already exists' })
+  const hashedPassword = await bcrypt.hash(expectedSecret, 12)
+  const results = []
+
+  const adminAccounts = [
+    { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
+    { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' }
+  ]
+
+  for (const account of adminAccounts) {
+    const existing = await User.findOne({ where: { email: account.email } })
+    if (existing) {
+      await User.update({
+        role: 'admin',
+        password: hashedPassword,
+        isEmailVerified: true,
+        isBlocked: false,
+      }, { where: { id: existing.id } })
+      results.push({ email: account.email, status: 'updated' })
+    } else {
+      await User.create({
+        name: 'Admin',
+        collegeId: account.collegeId,
+        email: account.email,
+        role: 'admin',
+        password: hashedPassword,
+        isEmailVerified: true,
+        isBlocked: false,
+      })
+      results.push({ email: account.email, status: 'created' })
+    }
   }
 
-  const hashedPassword = await bcrypt.hash(secret, 12)
-  await User.create({
-    name: 'Admin',
-    collegeId: 'ADMIN-001',
-    email: ADMIN_EMAIL,
-    role: 'admin',
-    password: hashedPassword,
-    isEmailVerified: true,
-    isBlocked: false,
-  })
-
-  return response.status(201).json({ success: true, message: 'Admin user created successfully' })
+  return response.status(200).json({ success: true, message: 'Admin users seeded successfully', results })
 }
 
 module.exports = { registerUser, verifyEmail, resendOtp, loginUser, requestPasswordReset, resetPassword, getCurrentUser, serializePublicUser, seedAdmin }
