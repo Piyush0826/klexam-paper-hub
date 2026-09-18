@@ -255,6 +255,10 @@ async function getCurrentUser(request, response) {
   return response.status(200).json({ success: true, user: request.user })
 }
 
+function serializePublicUser(user) {
+  return { id: user.id, name: user.name, email: user.email, collegeId: user.collegeId, role: user.role, isEmailVerified: Boolean(user.isEmailVerified), isBlocked: Boolean(user.isBlocked) }
+}
+
 async function seedAdmin(request, response) {
   const secret = request.body.secret || request.query.secret
   if (!secret || secret !== (process.env.ADMIN_PASSWORD || 'Piyush@1919')) {
