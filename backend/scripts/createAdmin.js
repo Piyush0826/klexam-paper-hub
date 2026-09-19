@@ -9,7 +9,6 @@ const bcrypt = require('bcryptjs');
 
 const ADMIN_ACCOUNTS = [
   { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
-  { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' }
 ];
 
 async function main() {
