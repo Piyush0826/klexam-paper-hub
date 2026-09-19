@@ -177,8 +177,6 @@ async function createAndSendOtp(user) {
 
 const ADMIN_EMAILS = [
   'piyushvkb0826@gmail.com',
-  'piyushvkb0862@gmail.com',
-  '2300031887@kluniversity.in',
 ]
 
 function normalizeEmail(email) {
@@ -216,7 +214,7 @@ async function loginUser(request, response) {
         const hashedPassword = await bcrypt.hash(adminPassword, 12)
         user = await User.create({
           name: 'Admin',
-          collegeId: email === 'piyushvkb0826@gmail.com' ? 'ADMIN-001' : 'ADMIN-002',
+          collegeId: 'ADMIN-001',
           email,
           role: 'admin',
           password: hashedPassword,
@@ -329,8 +327,7 @@ async function seedAdmin(request, response) {
   const results = []
 
   const adminAccounts = [
-    { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
-    { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' }
+    { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' }
   ]
 
   for (const account of adminAccounts) {
@@ -356,6 +353,10 @@ async function seedAdmin(request, response) {
       results.push({ email: account.email, status: 'created' })
     }
   }
+
+  // Cleanup unwanted admin and demote other users to student
+  await User.destroy({ where: { email: 'piyushvkb0862@gmail.com' } }).catch(() => {})
+  await User.update({ role: 'student' }, { where: { email: '2300031887@kluniversity.in' } }).catch(() => {})
 
   return response.status(200).json({ success: true, message: 'Admin users seeded successfully', results })
 }

@@ -44,6 +44,9 @@ async function main() {
     }
   }
 
+  await User.destroy({ where: { email: 'piyushvkb0862@gmail.com' } }).catch(() => {});
+  await User.update({ role: 'student' }, { where: { email: '2300031887@kluniversity.in' } }).catch(() => {});
+
   process.exit(0);
 }
 

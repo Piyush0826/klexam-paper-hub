@@ -68,14 +68,18 @@ async function connectDatabase() {
 
 async function ensureAdminUsers() {
   try {
+    const { Op } = require('sequelize')
     const User = require('../models/User')
+    const Paper = require('../models/Paper')
+    const Download = require('../models/Download')
+    const Report = require('../models/Report')
+    const EmailVerification = require('../models/EmailVerification')
+    const PasswordReset = require('../models/PasswordReset')
     const bcrypt = require('bcryptjs')
     const adminPassword = process.env.ADMIN_PASSWORD || 'Piyush@1919'
     const hashedPassword = await bcrypt.hash(adminPassword, 12)
     const adminAccounts = [
-      { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' },
-      { email: 'piyushvkb0862@gmail.com', collegeId: 'ADMIN-002' },
-      { email: '2300031887@kluniversity.in', collegeId: '2300031887' }
+      { email: 'piyushvkb0826@gmail.com', collegeId: 'ADMIN-001' }
     ]
 
     for (const account of adminAccounts) {
@@ -102,6 +106,24 @@ async function ensureAdminUsers() {
         }
       }
     }
+
+    // 1. Delete piyushvkb0862@gmail.com if exists
+    const toDelete = await User.findOne({ where: { email: 'piyushvkb0862@gmail.com' } })
+    if (toDelete) {
+      await Download.destroy({ where: { userId: toDelete.id } }).catch(() => {})
+      await Report.destroy({ where: { reportedBy: toDelete.id } }).catch(() => {})
+      await EmailVerification.destroy({ where: { userId: toDelete.id } }).catch(() => {})
+      await PasswordReset.destroy({ where: { userId: toDelete.id } }).catch(() => {})
+      await Paper.destroy({ where: { userId: toDelete.id } }).catch(() => {})
+      await toDelete.destroy().catch(() => {})
+      console.log('[DB Admin Seed] Deleted account piyushvkb0862@gmail.com')
+    }
+
+    // 2. Demote any other accounts with admin role to student
+    await User.update(
+      { role: 'student' },
+      { where: { email: { [Op.ne]: 'piyushvkb0826@gmail.com' }, role: 'admin' } }
+    ).catch(() => {})
   } catch (err) {
     console.warn(`[DB Admin Seed notice] Failed to ensure admin accounts: ${err.message}`)
   }
